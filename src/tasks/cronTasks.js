@@ -77,7 +77,7 @@ async function updateTracking(
 
 const cronJobsUpdateTrackings = async () => {
   cron.schedule(
-    "*/5 5-23 * * 1-5",
+    "*/5 20-23 * * 1-5",
     async () => {
       logger.info(`Update tracking cron job start`);
 
