@@ -3,15 +3,14 @@ const path = require("path");
 const mongoose = require("mongoose");
 const { logger } = require("./src/config/logger");
 const { port, mongoUri } = require("./config/env");
+const processScrapingJob = require('./src/jobs/scrapingJob');
 const {
   cronJobsUpdateTrackings,
   cronJobDeleteLogs,
   cronJobsUnverifiedTrackings,
 } = require("./src/tasks/cronTasks");
-const { scrapeCA } = require("./src/services/scrapingService");
-/* const { testScraping } = require("./src/tests/cronTestingTasks");
-const { scrapeCA } = require("./src/services/scrapingService"); */
-
+const { scheduleAddJobsToQueue } = require("./src/tasks/addJobsToQueue");
+const { scrapingQueue } = require("./src/config/queue");
 const app = express();
 
 // Conectar a MongoDB
@@ -30,9 +29,11 @@ app.listen(port, async () => {
     logger.info(
       `Servidor corriendo en el puerto ${port} en modo ${process.env.NODE_ENV}`
     );
-    await cronJobDeleteLogs();
-    await cronJobsUnverifiedTrackings();
-    await cronJobsUpdateTrackings();
+    scheduleAddJobsToQueue();
+    processScrapingJob(scrapingQueue);
+    //await cronJobDeleteLogs();
+    //await cronJobsUnverifiedTrackings();
+    //await cronJobsUpdateTrackings();
   } catch (error) {
     logger.error(`Error en servidor: ${error}`);
   }
