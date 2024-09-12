@@ -142,6 +142,8 @@ const cronJobsUnverifiedTrackings = async () => {
             { isVerified: true, isValid: false }
           );
         }
+      }else{
+        logger.info("No hay trackings no verificados para actualizar")
       }
     } catch (error) {
       logger.error("Error en cron de actualización de no verificados");
