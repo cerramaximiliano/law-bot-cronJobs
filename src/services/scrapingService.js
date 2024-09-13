@@ -59,6 +59,11 @@ const retryCaptchaValidation = async (maxRetries, siteKey, pageUrl) => {
   return captchaResponse;
 };
 
+const getScreenshotPath = (task, success = true) => {
+  if (task === "test") return success ? "/test/success" : "/test/failure";
+  return success ? "/success" : "/failure";
+};
+
 async function getPublicIP() {
   const encodedUser = encodeURIComponent(user);
   const encodedPassword = encodeURIComponent(password);
@@ -179,10 +184,15 @@ const scrapeCA = async (
       password: password, // Contraseña del proxy
     });
 
-    logger.info("Navegando a la página");
-    await page.goto("https://www.correoargentino.com.ar/formularios/ondnc", {
-      waitUntil: "domcontentloaded",
-    });
+    try {
+      logger.info("Navegando a la página");
+      await page.goto(pageUrl, {
+        waitUntil: "domcontentloaded",
+      });
+    } catch (error) {
+      logger.error(`Error al navegar a la página: ${error.message}`);
+      throw error; // Detenemos el proceso si la navegación falla
+    }
 
     const ip = await getPublicIP();
     if (ip) {
@@ -199,17 +209,13 @@ const scrapeCA = async (
     const tableData = await extractTableData(page);
     if (Array.isArray(tableData) && tableData.length === 0) {
       // No se encontraron resultados
-      let path = "";
-      task === "test" ? (path = "/test/failure") : (path = "/failure");
-      const screenshotPath = await captureScreenshot(page, cdNumber, path);
+      const screenshotPath = await captureScreenshot(page, cdNumber, getScreenshotPath(task, true));
       result.message =
         "No se encontró la tabla ni el mensaje esperado en el sitio.";
       result.success = false;
     } else if (Array.isArray(tableData) && tableData.length > 0) {
       // Guardar datos en la base de datos
-      let path = "";
-      task === "test" ? (path = "/test/success") : (path = "/success");
-      const screenshotPath = await captureScreenshot(page, cdNumber, path);
+      const screenshotPath = await captureScreenshot(page, cdNumber, getScreenshotPath(task, true));
       const trackingResult = await saveOrUpdateTrackingData(
         cdNumber,
         userId,
@@ -227,9 +233,7 @@ const scrapeCA = async (
       tableData === "No se encontraron resultados"
     ) {
       // Si `tableData` es un texto
-      let path = "/failure";
-      task === "test" ? (path = "/test/success") : (path = "/success");
-      const screenshotPath = await captureScreenshot(page, cdNumber, path);
+      const screenshotPath = await captureScreenshot(page, cdNumber, getScreenshotPath(task, true));
       const trackingResult = await saveOrUpdateTrackingData(
         cdNumber,
         userId,
