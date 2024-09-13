@@ -16,6 +16,7 @@ const axios = require("axios");
 const { captchaACSolver } = require("./captchaACService");
 const { capsolver } = require("./captchaCapService");
 const TwoCaptcha = require("@2captcha/captcha-solver");
+const { launchBrowser } = require("../config/puppeteer");
 
 const siteKey = process.env.RECAPTCHA_SCRAPE_PAGE_SITE_KEY;
 const pageUrl = process.env.RECAPTCHA_SCRAPE_PAGE;
@@ -23,41 +24,6 @@ const user = process.env.RECAPTCHA_USER;
 const password = process.env.RECAPTCHA_PASSWORD;
 const dns = process.env.RECAPTCHA_DNS;
 const port = process.env.RECAPTCHA_PORT;
-
-const retryCaptchaValidation = async (maxRetries, siteKey, pageUrl) => {
-  let attempts = 0;
-  let isTokenValid = false;
-  let captchaResponse;
-
-  while (attempts < maxRetries) {
-    attempts += 1;
-    logger.info(`Intento ${attempts} de resolver CAPTCHA.`);
-
-    captchaResponse = await captchaACSolver(pageUrl, siteKey); // Solicita nuevo captcha
-
-    if (!captchaResponse) {
-      logger.error("Error al resolver CAPTCHA.");
-      continue; // Si falla, reintenta
-    }
-
-    isTokenValid = await verifyRecaptcha(captchaResponse);
-
-    if (isTokenValid) {
-      logger.info("CAPTCHA validado correctamente.");
-      break; // Sale del bucle si se valida correctamente
-    } else {
-      logger.warn(
-        `Token inválido. Reintentando... (${attempts}/${maxRetries})`
-      );
-    }
-  }
-
-  if (!isTokenValid) {
-    throw new Error("No se pudo validar el CAPTCHA tras varios intentos.");
-  }
-
-  return captchaResponse;
-};
 
 const getScreenshotPath = (task, success = true) => {
   if (task === "test") return success ? "/test/success" : "/test/failure";
@@ -169,14 +135,7 @@ const scrapeCA = async (
   try {
     logger.info(`Iniciando el proceso de scraping para: ${cdNumber}`);
 
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", `--proxy-server=${dns}:${port}`, "--disable-gpu"],
-      ignoreDefaultArgs: ["--disable-extensions"],
-      defaultViewport: null,
-      executablePath: "/usr/bin/google-chrome",
-      userDataDir: "/usr/bin/custom/cache",
-    });
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
     await page.authenticate({
