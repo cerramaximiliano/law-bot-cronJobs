@@ -161,5 +161,4 @@ const cronJobDeleteLogs = async () => {
 module.exports = {
   cronJobsUpdateTrackings,
   cronJobDeleteLogs,
-  cronJobsUnverifiedTrackings,
 };

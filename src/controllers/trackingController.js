@@ -8,17 +8,21 @@ const saveOrUpdateTrackingData = async (
   tableData,
   screenshotPath,
   trackingType,
-  alias
+  alias,
+  _id
 ) => {
   try {
-    let tracking = await Tracking.findOne({ trackingCode, userId });
+    let tracking;
+
+    if (_id ) tracking = await Tracking.findById({ _id });
+    else tracking = await Tracking.findOne({ trackingCode, userId });
     let operation = "none";
 
     if (tracking) {
       logger.info(`Actualizando el tracking para el código: ${trackingCode}`);
       operation = "update";
 
-      if (tableData && tableData.length > 0) {
+      if (Array.isArray(tableData) && tableData.length > 0) {
         logger.info(
           `Hay datos en la tabla para actualizar en el código: ${trackingCode}`
         );
@@ -53,6 +57,12 @@ const saveOrUpdateTrackingData = async (
         tracking.lastUpdated = Date.now();
         tracking.isVerified = true;
         tracking.isValid = true;
+      } else if (
+        typeof tableData === "string" &&
+        tableData === "No se encontraron resultados"
+      ) {
+        tracking.isValid = false;
+        tracking.isVerified = true;
       } else {
         logger.info(
           `No hay datos en la tabla para actualizar en el código: ${trackingCode}`
@@ -77,12 +87,16 @@ const saveOrUpdateTrackingData = async (
         trackingCode,
         alias,
         trackingType,
-        movements: tableData.map((movement) => ({
-          date: moment(movement.date, "DD-MM-YYYY HH:mm").toDate(),
-          planta: movement.planta,
-          historia: movement.historia,
-          estado: movement.estado || "",
-        })),
+        movements: Array.isArray(tableData)
+        ? tableData.map((movement) => ({
+            date: moment(movement.date, "DD-MM-YYYY HH:mm").toDate(),
+            planta: movement.planta,
+            historia: movement.historia,
+            estado: movement.estado || "",
+          }))
+        : [],
+        isVerified: true,
+        isValid: typeof tableData === "string" && tableData === "No se encontraron resultados" ? false : true,
         lastUpdated: Date.now(),
         screenshots: screenshotPath
           ? [{ path: screenshotPath, capturedAt: Date.now() }]
@@ -124,7 +138,7 @@ async function getTrackingTelegramas(userId, isCompleted) {
 
 async function getUnverifiedTrackings() {
   try {
-    const foundedTrackings = await Tracking.find({ isVerified: false });
+    const foundedTrackings = await Tracking.find({ isVerified: false, isEnqueued: false });
     if (foundedTrackings) return foundedTrackings;
     else throw new Error("Error al buscar unverified trackings");
   } catch (err) {

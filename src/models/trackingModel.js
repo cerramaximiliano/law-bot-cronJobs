@@ -28,6 +28,7 @@ const trackingSchema = new Schema({
     type: Boolean,
     default: true,
   },
+  isEnqueued: { type: Boolean, default: false }, // Campo para marcar si ya está en la cola
   alias: {
     type: String,
   },

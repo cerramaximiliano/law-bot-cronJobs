@@ -149,7 +149,8 @@ const scrapeCA = async (
   trackingType = "telegrama",
   captchaService = "2Captcha",
   task = "rutine",
-  alias = null
+  alias = null,
+  _id
 ) => {
   let browser;
   let result = {
@@ -161,9 +162,11 @@ const scrapeCA = async (
   };
 
   try {
+    logger.info(`Iniciando el proceso de scraping para: ${cdNumber}`);
+
     browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", `--proxy-server=${dns}:${port}`],
+      args: ["--no-sandbox", `--proxy-server=${dns}:${port}`, "--disable-gpu"],
       ignoreDefaultArgs: ["--disable-extensions"],
       defaultViewport: null,
       executablePath: "/usr/bin/google-chrome",
@@ -201,6 +204,7 @@ const scrapeCA = async (
       const screenshotPath = await captureScreenshot(page, cdNumber, path);
       result.message =
         "No se encontró la tabla ni el mensaje esperado en el sitio.";
+      result.success = false;
     } else if (Array.isArray(tableData) && tableData.length > 0) {
       // Guardar datos en la base de datos
       let path = "";
@@ -212,21 +216,33 @@ const scrapeCA = async (
         tableData,
         screenshotPath,
         trackingType,
-        alias
+        alias,
+        _id
       );
       result.success = true;
       result.message = "Proceso completado exitosamente";
       result.data = trackingResult;
-    } else if (typeof tableData === "string") {
+    } else if (
+      typeof tableData === "string" &&
+      tableData === "No se encontraron resultados"
+    ) {
       // Si `tableData` es un texto
-      const path = "/failure";
+      let path = "/failure";
+      task === "test" ? (path = "/test/success") : (path = "/success");
       const screenshotPath = await captureScreenshot(page, cdNumber, path);
-
-      result.success = false;
+      const trackingResult = await saveOrUpdateTrackingData(
+        cdNumber,
+        userId,
+        tableData,
+        screenshotPath,
+        trackingType,
+        alias,
+        _id
+      );
+      result.success = true;
       result.message = tableData;
       result.data = null;
     } else {
-      
       result.success = false;
       result.message = "Error inesperado en tableData";
       result.data = null;

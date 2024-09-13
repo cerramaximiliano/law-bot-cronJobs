@@ -3,14 +3,15 @@ const path = require("path");
 const mongoose = require("mongoose");
 const { logger } = require("./src/config/logger");
 const { port, mongoUri } = require("./config/env");
-const processScrapingJob = require('./src/jobs/scrapingJob');
+const processScrapingJob = require("./src/jobs/scrapingJob");
 const {
   cronJobsUpdateTrackings,
   cronJobDeleteLogs,
-  cronJobsUnverifiedTrackings,
 } = require("./src/tasks/cronTasks");
 const { scheduleAddJobsToQueue } = require("./src/tasks/addJobsToQueue");
 const { scrapingQueue } = require("./src/config/queue");
+const serverAdapter = require("./src/config/bullBoard");
+const { scrapeCA } = require("./src/services/scrapingService");
 const app = express();
 
 // Conectar a MongoDB
@@ -31,10 +32,14 @@ app.listen(port, async () => {
     );
     scheduleAddJobsToQueue();
     processScrapingJob(scrapingQueue);
-    //await cronJobDeleteLogs();
-    //await cronJobsUnverifiedTrackings();
+    //scrapeCA()
+    
+    await cronJobDeleteLogs();
     //await cronJobsUpdateTrackings();
   } catch (error) {
     logger.error(`Error en servidor: ${error}`);
   }
 });
+
+app.use('/admin/queues', serverAdapter.getRouter());
+
