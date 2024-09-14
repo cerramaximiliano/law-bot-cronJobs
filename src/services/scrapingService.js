@@ -1,8 +1,8 @@
 const puppeteer = require("puppeteer-extra");
-const { HttpsProxyAgent } = require("https-proxy-agent");
 
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
+const { HttpsProxyAgent } = require("https-proxy-agent");
 const fs = require("fs").promises;
 const path = require("path");
 const { logger } = require("../config/logger");
