@@ -115,7 +115,7 @@ const scrapeWithoutBrowser = async () => {
 };
 
 const scrapeCA = async (
-  cdNumber = "123456789",
+  cdNumber,
   userId = "66c78ff7e79922bf212a7e43",
   trackingType = "telegrama",
   captchaService = "2Captcha",
@@ -134,6 +134,11 @@ const scrapeCA = async (
 
   try {
     logger.info(`Iniciando el proceso de scraping para: ${cdNumber}`);
+
+    if (!cdNumber){
+      throw Error(`No se proporcionó un tracking number correcto: ${cdNumber}`);
+    }
+
 
     browser = await launchBrowser();
 
@@ -168,13 +173,21 @@ const scrapeCA = async (
     const tableData = await extractTableData(page);
     if (Array.isArray(tableData) && tableData.length === 0) {
       // No se encontraron resultados
-      const screenshotPath = await captureScreenshot(page, cdNumber, getScreenshotPath(task, true));
+      const screenshotPath = await captureScreenshot(
+        page,
+        cdNumber,
+        getScreenshotPath(task, true)
+      );
       result.message =
         "No se encontró la tabla ni el mensaje esperado en el sitio.";
       result.success = false;
     } else if (Array.isArray(tableData) && tableData.length > 0) {
       // Guardar datos en la base de datos
-      const screenshotPath = await captureScreenshot(page, cdNumber, getScreenshotPath(task, true));
+      const screenshotPath = await captureScreenshot(
+        page,
+        cdNumber,
+        getScreenshotPath(task, true)
+      );
       const trackingResult = await saveOrUpdateTrackingData(
         cdNumber,
         userId,
@@ -192,7 +205,11 @@ const scrapeCA = async (
       tableData === "No se encontraron resultados"
     ) {
       // Si `tableData` es un texto
-      const screenshotPath = await captureScreenshot(page, cdNumber, getScreenshotPath(task, true));
+      const screenshotPath = await captureScreenshot(
+        page,
+        cdNumber,
+        getScreenshotPath(task, true)
+      );
       const trackingResult = await saveOrUpdateTrackingData(
         cdNumber,
         userId,

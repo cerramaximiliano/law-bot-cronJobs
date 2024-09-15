@@ -8,7 +8,10 @@ const {
   cronJobsUpdateTrackings,
   cronJobDeleteLogs,
 } = require("./src/tasks/cronTasks");
-const { scheduleAddJobsToQueue } = require("./src/tasks/addJobsToQueue");
+const {
+  scheduleAddJobsToQueue,
+  scheduleAddUpdatesToQueue,
+} = require("./src/tasks/addJobsToQueue");
 const { scrapingQueue } = require("./src/config/queue");
 const serverAdapter = require("./src/config/bullBoard");
 const { scrapeCA } = require("./src/services/scrapingService");
@@ -31,9 +34,10 @@ app.listen(port, async () => {
       `Servidor corriendo en el puerto ${port} en modo ${process.env.NODE_ENV}`
     );
     scheduleAddJobsToQueue();
+    scheduleAddUpdatesToQueue();
     processScrapingJob(scrapingQueue);
     //scrapeCA()
-    
+
     await cronJobDeleteLogs();
     //await cronJobsUpdateTrackings();
   } catch (error) {
@@ -41,5 +45,4 @@ app.listen(port, async () => {
   }
 });
 
-app.use('/admin/queues', serverAdapter.getRouter());
-
+app.use("/admin/queues", serverAdapter.getRouter());
