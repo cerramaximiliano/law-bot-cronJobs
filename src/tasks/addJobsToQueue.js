@@ -14,7 +14,7 @@ const scheduleAddJobsToQueue = () => {
 
     // Log detallado de los trackings
     if (trackings.length > 0) {
-      logger.info(`Disponibles ${trackings.length} trackings`);
+      logger.info(`Disponibles ${trackings.length} trackings para VERIFICAR`);
       for (const tracking of trackings) {
         logger.info(`Procesando tracking con _id: ${tracking._id}`);
         try {
@@ -30,10 +30,50 @@ const scheduleAddJobsToQueue = () => {
       }
     } else {
       logger.info(
-        "No se encontraron trackings pendientes para añadir a la cola."
+        "No se encontraron trackings pendientes para añadir a la cola para VERIFICAR."
       );
     }
   });
 };
 
-module.exports = { scheduleAddJobsToQueue };
+const scheduleAddUpdatesToQueue = () => {
+  cron.schedule(
+    "*/5 5-15 * * *",
+    async () => {
+      try{
+        logger.info(`Iniciando cron job para añadir trackings a la cola`);
+        const startOfDay = moment().startOf("day").toDate();
+        const trackings = await Tracking.findOneAndUpdate(
+          {
+            isCompleted: false,
+            isEnqueued: false,
+            $or: [
+              { lastScraped: { $lt: startOfDay } },
+              { lastScraped: { $exists: false } },
+            ],
+          },
+          { $set: { isProcessing: true } }, // Marca el elemento como en proceso
+          { sort: { lastScraped: 1 }, new: true } // Selecciona el más antiguo
+        );
+        if (trackings.length > 0) {
+          logger.info(`Disponibles ${trackings.length} trackings para ACTUALIZAR`);
+        }else{
+          logger.info(
+            "No se encontraron trackings pendientes para añadir a la cola para ACTUALIZAR."
+          );
+        }
+      }catch(err){
+
+      }
+    },
+      {
+        scheduled: true,
+        timezone: "America/Argentina/Buenos_Aires",
+      }
+
+    );
+  };
+
+
+
+module.exports = { scheduleAddJobsToQueue, scheduleAddUpdatesToQueue };
