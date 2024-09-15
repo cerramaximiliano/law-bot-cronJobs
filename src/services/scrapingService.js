@@ -134,9 +134,12 @@ const scrapeCA = async (
 
   try {
     logger.info(`Iniciando el proceso de scraping para: ${cdNumber}`);
-
-    if (!cdNumber){
-      throw Error(`No se proporcionó un tracking number correcto: ${cdNumber}`);
+    if (!cdNumber) {
+      throw new Error(`No se proporcionó un tracking number correcto: ${cdNumber}`);
+    }
+    const cdNumberPattern = /^[0-9]{9}$/;
+    if (!cdNumberPattern.test(cdNumber)) {
+      throw new Error(`El tracking number debe contener exactamente 9 dígitos: ${cdNumber}`);
     }
 
 

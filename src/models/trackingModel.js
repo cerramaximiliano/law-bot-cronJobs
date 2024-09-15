@@ -28,6 +28,14 @@ const trackingSchema = new Schema({
     type: Boolean,
     default: true,
   },
+  isErase: {
+    type: Boolean,
+    default: false,
+  },
+  isArchive: {
+    type: Boolean,
+    default: false,
+  },
   isEnqueued: { type: Boolean, default: false }, // Campo para marcar si ya está en la cola
   alias: {
     type: String,

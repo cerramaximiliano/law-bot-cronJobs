@@ -48,7 +48,7 @@ module.exports = function processScrapingJob(scrapingQueue) {
 
     try {
       // Establecer isEnqueued en false cuando se complete el trabajo
-      await Tracking.findByIdAndUpdate(_id, { isEnqueued: false });
+      await Tracking.findByIdAndUpdate(_id, { isEnqueued: false, lastScraped: new Date() });
       logger.info(`Flag isEnqueued restablecido a false para: ${trackingCode}`);
     } catch (updateError) {
       logger.error(`Error al restablecer flag isEnqueued tras completar: ${updateError.message}`);

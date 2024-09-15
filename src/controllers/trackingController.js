@@ -14,7 +14,7 @@ const saveOrUpdateTrackingData = async (
   try {
     let tracking;
 
-    if (_id ) tracking = await Tracking.findById({ _id });
+    if (_id) tracking = await Tracking.findById({ _id });
     else tracking = await Tracking.findOne({ trackingCode, userId });
     let operation = "none";
 
@@ -61,8 +61,14 @@ const saveOrUpdateTrackingData = async (
         typeof tableData === "string" &&
         tableData === "No se encontraron resultados"
       ) {
-        tracking.isValid = false;
-        tracking.isVerified = true;
+        if (tracking.movements.length > 0) {
+          // La nueva situación: hay movimientos previos, solo actualizamos `lastUpdated`
+          tracking.lastUpdated = Date.now();
+        } else {
+          // Situación actual: no hay movimientos previos
+          tracking.isValid = false;
+          tracking.isVerified = true;
+        }
       } else {
         logger.info(
           `No hay datos en la tabla para actualizar en el código: ${trackingCode}`
@@ -88,15 +94,18 @@ const saveOrUpdateTrackingData = async (
         alias,
         trackingType,
         movements: Array.isArray(tableData)
-        ? tableData.map((movement) => ({
-            date: moment(movement.date, "DD-MM-YYYY HH:mm").toDate(),
-            planta: movement.planta,
-            historia: movement.historia,
-            estado: movement.estado || "",
-          }))
-        : [],
+          ? tableData.map((movement) => ({
+              date: moment(movement.date, "DD-MM-YYYY HH:mm").toDate(),
+              planta: movement.planta,
+              historia: movement.historia,
+              estado: movement.estado || "",
+            }))
+          : [],
         isVerified: true,
-        isValid: typeof tableData === "string" && tableData === "No se encontraron resultados" ? false : true,
+        isValid:
+          typeof tableData === "string" && tableData === "No se encontraron resultados"
+            ? false
+            : true,
         lastUpdated: Date.now(),
         screenshots: screenshotPath
           ? [{ path: screenshotPath, capturedAt: Date.now() }]

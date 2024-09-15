@@ -16,7 +16,6 @@ const scheduleAddJobsToQueue = () => {
     if (trackings.length > 0) {
       logger.info(`Disponibles ${trackings.length} trackings para VERIFICAR`);
       for (const tracking of trackings) {
-        console.log(tracking)
         logger.info(`Procesando tracking con _id: ${tracking._id}`);
         try {
           await addJobToQueue(
@@ -39,7 +38,7 @@ const scheduleAddJobsToQueue = () => {
 
 const scheduleAddUpdatesToQueue = () => {
   cron.schedule(
-    "*/15 5-15 * * *",
+    "*/1 * * * *",
     async () => {
       try {
         logger.info(`Iniciando cron job para añadir trackings a la cola`);
@@ -52,9 +51,8 @@ const scheduleAddUpdatesToQueue = () => {
               { lastScraped: { $lt: startOfDay } },
               { lastScraped: { $exists: false } },
             ],
-          },
-          { sort: { lastScraped: 1 }, new: true } // Selecciona el más antiguo
-        );
+          }
+        ).sort({ lastScraped: 1 }); // Ordena por lastScraped, más antiguo primero
         if (trackings.length > 0) {
           logger.info(
             `Disponibles ${trackings.length} trackings para ACTUALIZAR`
