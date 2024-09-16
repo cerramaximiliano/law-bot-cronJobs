@@ -4,10 +4,7 @@ const mongoose = require("mongoose");
 const { logger } = require("./src/config/logger");
 const { port, mongoUri } = require("./config/env");
 const processScrapingJob = require("./src/jobs/scrapingJob");
-const {
-  cronJobsUpdateTrackings,
-  cronJobDeleteLogs,
-} = require("./src/tasks/cronTasks");
+const { cronJobDeleteLogs } = require("./src/tasks/cronTasks");
 const {
   scheduleAddJobsToQueue,
   scheduleAddUpdatesToQueue,
@@ -15,6 +12,7 @@ const {
 const { scrapingQueue } = require("./src/config/queue");
 const serverAdapter = require("./src/config/bullBoard");
 const { scrapeCA } = require("./src/services/scrapingService");
+const { monitorResources } = require("./src/monitor/monitor");
 const app = express();
 
 // Conectar a MongoDB
@@ -37,7 +35,7 @@ app.listen(port, async () => {
     scheduleAddUpdatesToQueue();
     processScrapingJob(scrapingQueue);
     //scrapeCA()
-
+    setInterval(monitorResources, 60000);
     await cronJobDeleteLogs();
     //await cronJobsUpdateTrackings();
   } catch (error) {

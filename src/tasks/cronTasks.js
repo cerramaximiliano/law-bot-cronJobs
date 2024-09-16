@@ -117,44 +117,14 @@ const cronJobsUpdateTrackings = async () => {
   );
 };
 
-const cronJobsUnverifiedTrackings = async () => {
-  cron.schedule("*/5 * * * *", async () => {
-    try {
-      logger.info("Iniciando actualización de trackings no verificados");
-      const unverified = await getUnverifiedTrackings();
-
-      if (unverified.length > 0) {
-        const cdNumber = unverified[0].trackingCode;
-        logger.info(
-          `Iniciando scraping de trackings no verificados para CD ${cdNumber}`
-        );
-        const scraping = await scrapeCA(cdNumber);
-
-        if (
-          scraping.success === false &&
-          scraping.message === "No se encontraron resultados"
-        ) {
-          logger.info(
-            `No se encontraron resultados. ${cdNumber} isVerified set true, isValid set false`
-          );
-          const update = await Tracking.findByIdAndUpdate(
-            { _id: unverified[0]._id },
-            { isVerified: true, isValid: false }
-          );
-        }
-      }else{
-        logger.info("No hay trackings no verificados para actualizar")
-      }
-    } catch (error) {
-      logger.error("Error en cron de actualización de no verificados");
-    }
-  });
-};
-
 const cronJobDeleteLogs = async () => {
   cron.schedule("0 0 */10 * *", async () => {
     logger.info("Ejecutando limpieza de logs.");
     await clearLogs();
+  });
+  cron.schedule("0 0 */5 * *", async () => {
+    logger.info("Ejecutando limpieza de logs.");
+    await clearMonitorLogs();
   });
 };
 
