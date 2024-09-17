@@ -226,6 +226,11 @@ const scrapeCA = async (
       result.message = tableData;
       result.data = null;
     } else {
+      const screenshotPath = await captureScreenshot(
+        page,
+        cdNumber,
+        getScreenshotPath(task, false)
+      );
       result.success = false;
       result.message = "Error inesperado en tableData";
       result.data = null;
@@ -258,10 +263,8 @@ const captureScreenshot = async (page, cdNumber, subPath) => {
   // Verificar si el directorio ya existe
   try {
     await fs.access(screenshotDir); // Intentar acceder al directorio
-    logger.info(`El directorio ya existe: ${screenshotDir}`);
   } catch (error) {
     // Si el acceso falla, creamos el directorio
-    logger.info(`El directorio no existe, creando: ${screenshotDir}`);
     try {
       await fs.mkdir(screenshotDir, { recursive: true }); // Crear directorios intermedios si es necesario
     } catch (mkdirError) {

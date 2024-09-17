@@ -70,7 +70,7 @@ const trackingSchema = new Schema({
     type: Boolean,
     default: false,
   },
-  screenshots: [
+  screenshots: 
     {
       path: {
         type: String,
@@ -81,7 +81,6 @@ const trackingSchema = new Schema({
         default: Date.now,
       },
     },
-  ],
 });
 
 // Método para agregar un movimiento

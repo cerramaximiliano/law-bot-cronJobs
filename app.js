@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const { logger } = require("./src/config/logger");
 const { port, mongoUri } = require("./config/env");
 const processScrapingJob = require("./src/jobs/scrapingJob");
-const { cronJobDeleteLogs } = require("./src/tasks/cronTasks");
+const { cronJobDeleteLogs, testUpdate } = require("./src/tasks/cronTasks");
 const {
   scheduleAddJobsToQueue,
   scheduleAddUpdatesToQueue,
@@ -14,6 +14,8 @@ const serverAdapter = require("./src/config/bullBoard");
 const { scrapeCA } = require("./src/services/scrapingService");
 const { monitorResources } = require("./src/monitor/monitor");
 const app = express();
+
+
 
 // Conectar a MongoDB
 mongoose
@@ -34,10 +36,9 @@ app.listen(port, async () => {
     scheduleAddJobsToQueue();
     scheduleAddUpdatesToQueue();
     processScrapingJob(scrapingQueue);
-    //scrapeCA()
     setInterval(monitorResources, 60000);
     await cronJobDeleteLogs();
-    //await cronJobsUpdateTrackings();
+    await testUpdate(50, true)
   } catch (error) {
     logger.error(`Error en servidor: ${error}`);
   }

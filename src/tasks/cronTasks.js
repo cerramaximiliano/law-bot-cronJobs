@@ -1,10 +1,16 @@
 const cron = require("node-cron");
 const Tracking = require("../models/trackingModel");
+const CaptchaResult = require("../models/captchaResultModel");
 const { scrapeCA } = require("../services/scrapingService");
-const { logger, clearLogs } = require("../config/logger");
+const {
+  logger,
+  clearLogs,
+  clearMonitorLogs,
+  checkAndDeleteLogs,
+} = require("../config/logger");
 const moment = require("moment");
 const { logCaptchaResult } = require("../controllers/captchaResultController");
-const { getUnverifiedTrackings } = require("../controllers/trackingController");
+const { addJobToQueue } = require("../config/queue");
 
 const captchaServices = ["2Captcha", "capsolver", "anticaptcha"]; // Lista de servicios de CAPTCHA
 let serviceErrors = {
@@ -120,15 +126,102 @@ const cronJobsUpdateTrackings = async () => {
 const cronJobDeleteLogs = async () => {
   cron.schedule("0 0 */10 * *", async () => {
     logger.info("Ejecutando limpieza de logs.");
-    await clearLogs();
+    try {
+      await clearLogs();
+    } catch (err) {
+      logger.error(`Error ejecutando limpieza de logs periódica: ${err}`);
+    }
   });
   cron.schedule("0 0 */5 * *", async () => {
     logger.info("Ejecutando limpieza de logs.");
-    await clearMonitorLogs();
+    try {
+      await clearMonitorLogs();
+    } catch (err) {
+      logger.error(`Error ejecutando limpieza de logs semanal: ${err}`);
+    }
+  });
+  cron.schedule("0 11 * * *", async () => {
+    logger.info("Ejecutando limpieza de logs diaria.");
+    try {
+      await checkAndDeleteLogs();
+    } catch (err) {
+      logger.error(`Error ejecutando limpieza de logs diaria: ${err}`);
+    }
   });
 };
 
+const testUpdate = async (nRepetitions, isTesting = true) => {
+  try {
+    logger.info(
+      `Iniciando cron job para añadir trackings a la cola (repeticiones: ${nRepetitions}, testing: ${isTesting})`
+    );
+
+    const startOfDay = moment().startOf("day").toDate();
+
+    // Consulta para obtener los trackings
+    const query = {
+      isArchive: false,
+      isErase: false,
+    };
+
+    const trackings = await Tracking.find(query).sort({ lastScraped: 1 });
+
+    // Si no hay suficientes documentos, repetimos los trackings
+    const totalTrackings = trackings.length;
+    if (totalTrackings === 0) {
+      logger.info("No se encontraron trackings pendientes para procesar.");
+      return;
+    }
+
+    logger.info(`Se encontraron ${totalTrackings} trackings.`);
+
+    // Crear documento inicial de CaptchaResult
+    const captchaResult = await CaptchaResult.create({
+      service: "TestService",
+      success: 0,
+      failure: 0,
+      ipsUsedSuccess: [],
+      ipsUsedFailure: [],
+      scrapeDuration: [],
+      type: isTesting ? "testing" : "production",
+      startTime: new Date(),
+      endTime: null,
+      repetitions: nRepetitions,
+    });
+
+    const captchaResultId = captchaResult._id; // Guardamos el _id para las actualizaciones posteriores
+
+    // Bucle para añadir nRepetitions jobs a la cola
+    for (let i = 0; i < nRepetitions; i++) {
+      // Usar un índice cíclico para repetir los trackings si es necesario
+      const tracking = trackings[i % totalTrackings];
+      logger.info(`Añadiendo tracking con _id: ${tracking._id} (Repetición ${i + 1} de ${nRepetitions})`);
+
+      try {
+        // Añadir el trabajo a la cola
+        await addJobToQueue(
+          tracking.trackingCode,
+          tracking.userId,
+          tracking.trackingType,
+          tracking._id,
+          isTesting,
+          captchaResultId
+        );
+      } catch (err) {
+        logger.error(`Error al añadir tracking con _id: ${tracking._id} a la cola: ${err.message}`);
+      }
+    }
+    
+    logger.info(`${nRepetitions} trabajos añadidos a la cola correctamente.`);
+  } catch (err) {
+    logger.error("Error durante la ejecución de la simulación:", err);
+  }
+};
+
+
+
+
 module.exports = {
-  cronJobsUpdateTrackings,
+  testUpdate,
   cronJobDeleteLogs,
 };

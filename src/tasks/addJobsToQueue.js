@@ -11,7 +11,6 @@ const scheduleAddJobsToQueue = () => {
   cron.schedule("*/2 * * * *", async () => {
     logger.info(`Iniciando cron job para añadir trackings a la cola`);
     const trackings = await getUnverifiedTrackings();
-
     // Log detallado de los trackings
     if (trackings.length > 0) {
       logger.info(`Disponibles ${trackings.length} trackings para VERIFICAR`);
@@ -38,7 +37,7 @@ const scheduleAddJobsToQueue = () => {
 
 const scheduleAddUpdatesToQueue = () => {
   cron.schedule(
-    "*/1 * * * *",
+    '* 10-15 * * 1-5',
     async () => {
       try {
         logger.info(`Iniciando cron job para añadir trackings a la cola`);
@@ -47,6 +46,8 @@ const scheduleAddUpdatesToQueue = () => {
           {
             isCompleted: false,
             isEnqueued: false,
+            isArchive: false,
+            isErase: false,
             $or: [
               { lastScraped: { $lt: startOfDay } },
               { lastScraped: { $exists: false } },

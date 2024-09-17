@@ -30,7 +30,7 @@ const monitorResources = async () => {
     // Escribimos los logs en un archivo
     fs.appendFile("./src/logs/resource-usage.log", log, (err) => {
       if (err) throw err;
-      logger.info("Registro de uso de recursos guardado");
+      //logger.info("Registro de uso de recursos guardado");
     });
   } catch (error) {
     logger.error("Error al obtener los datos del sistema:", error);

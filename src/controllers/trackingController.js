@@ -57,6 +57,12 @@ const saveOrUpdateTrackingData = async (
         tracking.lastUpdated = Date.now();
         tracking.isVerified = true;
         tracking.isValid = true;
+        if (screenshotPath) {
+          tracking.screenshots = {
+            path: screenshotPath,
+            capturedAt: Date.now(),
+          };
+        }
       } else if (
         typeof tableData === "string" &&
         tableData === "No se encontraron resultados"
@@ -68,18 +74,23 @@ const saveOrUpdateTrackingData = async (
           // Situación actual: no hay movimientos previos
           tracking.isValid = false;
           tracking.isVerified = true;
+          if (screenshotPath) {
+            tracking.screenshots = {
+              path: screenshotPath,
+              capturedAt: Date.now(),
+            };
+          }
         }
       } else {
         logger.info(
           `No hay datos en la tabla para actualizar en el código: ${trackingCode}`
         );
-      }
-
-      if (screenshotPath) {
-        tracking.screenshots.push({
-          path: screenshotPath,
-          capturedAt: Date.now(),
-        });
+        if (screenshotPath) {
+          tracking.screenshots = {
+            path: screenshotPath,
+            capturedAt: Date.now(),
+          };
+        }
       }
 
       await tracking.save();
@@ -103,7 +114,8 @@ const saveOrUpdateTrackingData = async (
           : [],
         isVerified: true,
         isValid:
-          typeof tableData === "string" && tableData === "No se encontraron resultados"
+          typeof tableData === "string" &&
+          tableData === "No se encontraron resultados"
             ? false
             : true,
         lastUpdated: Date.now(),
@@ -147,7 +159,10 @@ async function getTrackingTelegramas(userId, isCompleted) {
 
 async function getUnverifiedTrackings() {
   try {
-    const foundedTrackings = await Tracking.find({ isVerified: false, isEnqueued: false });
+    const foundedTrackings = await Tracking.find({
+      isVerified: false,
+      isEnqueued: false,
+    });
     if (foundedTrackings) return foundedTrackings;
     else throw new Error("Error al buscar unverified trackings");
   } catch (err) {
