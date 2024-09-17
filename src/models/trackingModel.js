@@ -70,17 +70,16 @@ const trackingSchema = new Schema({
     type: Boolean,
     default: false,
   },
-  screenshots: 
-    {
-      path: {
-        type: String,
-        required: true,
-      },
-      capturedAt: {
-        type: Date,
-        default: Date.now,
-      },
+  screenshots: {
+    path: {
+      type: String,
+      required: true,
     },
+    capturedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
 });
 
 // Método para agregar un movimiento
