@@ -179,18 +179,32 @@ const scrapeCA = async (
     }
 
     const checkCaptchaChallenge = await checkRecaptchaAppearance(page);
-    logger.info(`Check captcha challenge result: `, checkCaptchaChallenge);
     if (checkCaptchaChallenge) {
-      logger.info(`Checkeando contenido de recaptcha Challenge`);
-      const captchaChallengeData = await extractRecaptchaDataWithCanvas(page);
-      console.log(captchaChallengeData);
-      const solver = new TwoCaptcha.Solver(process.env.RECAPTCHA_API_KEY);
+      logger.info(`Captcha rechazado. Captcha Challenge abierto.`);
+      //const captchaChallengeData = await extractRecaptchaDataWithCanvas(page);
+
+/*       const solver = new TwoCaptcha.Solver(process.env.RECAPTCHA_API_KEY);
       const resultCaptchaChallenge = await solver.grid({
         body: captchaChallengeData.body,
         textinstructions: captchaChallengeData.textinstructions,
         lang: "es",
+        rows: captchaChallengeData.rows,
+        columns: captchaChallengeData.columns,
       });
-      console.log(resultCaptchaChallenge);
+      console.log(resultCaptchaChallenge); */
+/*       if (resultCaptchaChallenge) {
+        await solveCaptchaInIframe(page, resultCaptchaChallenge);
+        const screenshotPath = await captureScreenshot(
+          page,
+          cdNumber,
+          getScreenshotPath(task, true)
+        );
+        result.success = false;
+        result.message = "Error inesperado en tableData";
+        result.data = null;
+      } else {
+      } */
+
       const screenshotPath = await captureScreenshot(
         page,
         cdNumber,
@@ -201,7 +215,7 @@ const scrapeCA = async (
       result.data = null;
       if (captchaService === "2Captcha") {
         const solver = new TwoCaptcha.Solver(process.env.RECAPTCHA_API_KEY);
-        logger.info(`Captcha id: ${captchaId}`);
+        logger.info(`Captcha id reported: ${captchaId}`);
         if (captchaId) {
           try {
             await solver.badReport(captchaId);
@@ -212,6 +226,7 @@ const scrapeCA = async (
           }
         }
       }
+
 
     } else {
       await completeAndSubmitForm(page, cdNumber);
@@ -305,11 +320,8 @@ const captureScreenshot = async (page, cdNumber, subPath) => {
     visible: true,
     timeout: 60000, // Esperar hasta 60 segundos
   });
-
   // Crear la carpeta de capturas de pantalla si no existe
-  logger.info(`Capture screenshot function start, path: ${subPath}`);
   const screenshotDir = path.join(__dirname, `screenshots${subPath}`);
-
   // Verificar si el directorio ya existe
   try {
     await fs.access(screenshotDir); // Intentar acceder al directorio
@@ -324,14 +336,9 @@ const captureScreenshot = async (page, cdNumber, subPath) => {
       throw new Error(`No se pudo crear el directorio: ${screenshotDir}`);
     }
   }
-
   // Tomar una captura de pantalla del área visible completa
   const screenshotPath = path.join(screenshotDir, `result-${cdNumber}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
-
-  logger.info(
-    `Captura de pantalla del resultado guardada en: ${screenshotPath}`
-  );
   return screenshotPath;
 };
 
@@ -397,18 +404,13 @@ const extractTableData = async (page) => {
   }
 };
 
-const resolveCaptchaAndClick = async (
-  page,
-  captchaService,
-  timeout = 240000
-) => {
+const resolveCaptchaAndClick = async (page, captchaService, timeout = 240000) => {
   logger.info("Resolviendo CAPTCHA...");
 
-  // Medir el tiempo de resolución del CAPTCHA
   const startTime = Date.now();
   let captchaResponse;
   let captchaId = "";
-  // Crear una promesa que se rechaza después del tiempo de espera especificado
+
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => {
       reject(new Error("Timeout al resolver CAPTCHA"));
@@ -416,7 +418,6 @@ const resolveCaptchaAndClick = async (
   );
 
   try {
-    // Crear una promesa que resuelve el CAPTCHA según el servicio utilizado
     const captchaPromise = (async () => {
       switch (captchaService) {
         case "2Captcha":
@@ -458,16 +459,11 @@ const resolveCaptchaAndClick = async (
       return captchaResponse;
     })();
 
-    // Esperar la promesa del captcha o la promesa del timeout, lo que ocurra primero
     captchaResponse = await Promise.race([captchaPromise, timeoutPromise]);
-
     logger.info(`Token CAPTCHA: ${captchaResponse}`);
 
-    // Inyectar el token de CAPTCHA en el campo `g-recaptcha-response`
     await page.evaluate((token) => {
-      const recaptchaResponseField = document.getElementById(
-        "g-recaptcha-response"
-      );
+      const recaptchaResponseField = document.getElementById("g-recaptcha-response");
       if (recaptchaResponseField) {
         recaptchaResponseField.value = token;
       } else {
@@ -475,16 +471,9 @@ const resolveCaptchaAndClick = async (
       }
     }, captchaResponse);
 
-    await page.evaluate(
-      `document.getElementById("g-recaptcha-response").innerHTML="${captchaResponse}";`
-    );
-
     logger.info("Token inyectado en el campo g-recaptcha-response");
 
-    // Hacer clic en el checkbox del CAPTCHA
-    const recaptchaFrame = page
-      .frames()
-      .find((frame) => frame.url().includes("recaptcha"));
+    const recaptchaFrame = page.frames().find((frame) => frame.url().includes("recaptcha"));
     if (recaptchaFrame) {
       logger.info("Iframe de reCAPTCHA encontrado");
       await recaptchaFrame.waitForSelector(".recaptcha-checkbox-border", {
@@ -497,23 +486,17 @@ const resolveCaptchaAndClick = async (
       throw new Error("No se pudo encontrar el iframe de reCAPTCHA.");
     }
 
-    // Medir el tiempo final de resolución
     const endTime = Date.now();
-    const resolutionTime = (endTime - startTime) / 1000; // Convertir a segundos
-    await new Promise((resolve) => {
-      const delay = randomDelay(20, 25);
-      setTimeout(resolve, delay);
-    });
+    const resolutionTime = (endTime - startTime) / 1000;
 
     logger.info(`CAPTCHA resuelto en: ${resolutionTime} segundos`);
     return captchaId;
   } catch (err) {
-    logger.error(
-      `Error al resolver CAPTCHA con ${captchaService}: ${err.message}`
-    );
+    logger.error(`Error al resolver CAPTCHA con ${captchaService}: ${err.message}`);
     throw err;
   }
 };
+
 
 const completeAndSubmitForm = async (page, cdNumber) => {
   logger.info("Completando el formulario...");
@@ -733,5 +716,80 @@ const extractRecaptchaDataWithCanvas = async (page) => {
     return null;
   }
 };
+
+const parseCaptchaData = (data) => {
+  return data.split(":")[1].split("/").map(Number); // Extraer los números de "click:1/7/9"
+};
+const getRecaptchaFrame = async (page) => {
+  // Obtener todos los iframes en la página
+  const frames = page.frames();
+
+  // Encontrar el iframe que contiene el reCAPTCHA
+  const recaptchaFrame = frames.find((frame) =>
+    frame.url().includes("recaptcha/api2/bframe")
+  );
+
+  if (!recaptchaFrame) {
+    throw new Error("No se encontró el iframe de reCAPTCHA.");
+  }
+
+  return recaptchaFrame;
+};
+
+const clickCaptchaTilesInFrame = async (frame, tileIndices) => {
+  // Esperar a que las imágenes del reCAPTCHA estén presentes dentro del iframe
+  await frame.waitForSelector(".rc-imageselect-tile", {
+    visible: true,
+    timeout: 30000,
+  });
+
+  // Obtener todos los tiles (cuadrantes) de las imágenes
+  const tiles = await frame.$$(".rc-imageselect-tile");
+
+  // Recorrer los índices que se deben hacer clic
+  for (const index of tileIndices) {
+    const tile = tiles[index - 1]; // Los índices comienzan en 1, por eso se resta 1
+    if (tile) {
+      await tile.click(); // Hacer clic en el tile correspondiente
+    }
+  }
+};
+
+const submitCaptchaInFrame = async (frame) => {
+  // Esperar a que el botón "Verificar" esté disponible dentro del iframe
+  await frame.waitForSelector(".rc-button-default.goog-inline-block", {
+    visible: true,
+    timeout: 30000,
+  });
+
+  // Hacer clic en el botón "Verificar"
+  const verifyButton = await frame.$(".rc-button-default.goog-inline-block");
+  await verifyButton.click();
+};
+
+const solveCaptchaInIframe = async (page, captchaSolverResponse) => {
+  try {
+    // Parsear los índices de los tiles desde la respuesta del captcha solver
+    const tileIndices = parseCaptchaData(captchaSolverResponse.data);
+    console.log(tileIndices);
+    // Acceder al iframe del reCAPTCHA
+    const recaptchaFrame = await getRecaptchaFrame(page);
+    // Hacer clic en los tiles correspondientes dentro del iframe
+    await clickCaptchaTilesInFrame(recaptchaFrame, tileIndices);
+    // Presionar el botón "Verificar" dentro del iframe
+    await submitCaptchaInFrame(recaptchaFrame);
+
+    console.log("Captcha resuelto y verificado.");
+  } catch (error) {
+    console.error("Error al resolver el captcha:", error);
+  }
+};
+
+
+
+
+
+
+
 
 module.exports = { scrapeCA, scrapeWithoutBrowser };

@@ -33,12 +33,12 @@ app.listen(port, async () => {
     logger.info(
       `Servidor corriendo en el puerto ${port} en modo ${process.env.NODE_ENV}`
     );
-    scheduleAddJobsToQueue();
-    scheduleAddUpdatesToQueue();
+    //scheduleAddJobsToQueue();
+    //scheduleAddUpdatesToQueue();
     processScrapingJob(scrapingQueue);
     setInterval(monitorResources, 60000);
     await cronJobDeleteLogs();
-    //await testUpdate(50, true)
+    await testUpdate(1, true)
   } catch (error) {
     logger.error(`Error en servidor: ${error}`);
   }

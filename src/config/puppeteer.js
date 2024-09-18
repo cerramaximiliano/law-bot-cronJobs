@@ -8,7 +8,7 @@ const port = process.env.RECAPTCHA_PORT;
 
 const launchBrowser = async () => {
   return puppeteer.launch({
-    headless: true,
+    headless: false,
     args: ["--no-sandbox", `--proxy-server=${dns}:${port}`, "--disable-gpu"],
     ignoreDefaultArgs: ["--disable-extensions"],
     defaultViewport: null,
