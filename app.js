@@ -38,7 +38,7 @@ app.listen(port, async () => {
     processScrapingJob(scrapingQueue);
     setInterval(monitorResources, 60000);
     await cronJobDeleteLogs();
-    await testUpdate(50, true)
+    //await testUpdate(50, true)
   } catch (error) {
     logger.error(`Error en servidor: ${error}`);
   }

@@ -31,7 +31,7 @@ const addJobToQueue = async (trackingCode, userId, trackingType, _id, isTesting 
             backoff: 5000, // Esperar 5 segundos entre reintentos
             removeOnComplete: true, // Eliminar al completar
             removeOnFail: false, // Mantener el registro de fallos
-            timeout: 360000, // Tiempo máximo de 3 minutos
+            timeout: 300000, // Tiempo máximo de 3 minutos
           }
         );
 
