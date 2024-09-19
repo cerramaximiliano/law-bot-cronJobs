@@ -181,9 +181,10 @@ const scrapeCA = async (
     const checkCaptchaChallenge = await checkRecaptchaAppearance(page);
     if (checkCaptchaChallenge) {
       logger.info(`Captcha rechazado. Captcha Challenge abierto.`);
-      //const captchaChallengeData = await extractRecaptchaDataWithCanvas(page);
+      const captchaChallengeData = await extractRecaptchaData(page);
+      console.log(captchaChallengeData);
 
-/*       const solver = new TwoCaptcha.Solver(process.env.RECAPTCHA_API_KEY);
+      /*       const solver = new TwoCaptcha.Solver(process.env.RECAPTCHA_API_KEY);
       const resultCaptchaChallenge = await solver.grid({
         body: captchaChallengeData.body,
         textinstructions: captchaChallengeData.textinstructions,
@@ -192,7 +193,7 @@ const scrapeCA = async (
         columns: captchaChallengeData.columns,
       });
       console.log(resultCaptchaChallenge); */
-/*       if (resultCaptchaChallenge) {
+      /*       if (resultCaptchaChallenge) {
         await solveCaptchaInIframe(page, resultCaptchaChallenge);
         const screenshotPath = await captureScreenshot(
           page,
@@ -211,11 +212,11 @@ const scrapeCA = async (
         getScreenshotPath(task, false)
       );
       result.success = false;
-      result.message = "Error inesperado en tableData";
+      result.message = "Resolución de captcha incorrecta";
       result.data = null;
       if (captchaService === "2Captcha") {
         const solver = new TwoCaptcha.Solver(process.env.RECAPTCHA_API_KEY);
-        logger.info(`Captcha id reported: ${captchaId}`);
+        logger.info(`Captcha error id reported: ${captchaId}`);
         if (captchaId) {
           try {
             await solver.badReport(captchaId);
@@ -226,8 +227,6 @@ const scrapeCA = async (
           }
         }
       }
-
-
     } else {
       await completeAndSubmitForm(page, cdNumber);
       // Tomar captura de pantalla y extraer datos
@@ -404,7 +403,11 @@ const extractTableData = async (page) => {
   }
 };
 
-const resolveCaptchaAndClick = async (page, captchaService, timeout = 240000) => {
+const resolveCaptchaAndClick = async (
+  page,
+  captchaService,
+  timeout = 240000
+) => {
   logger.info("Resolviendo CAPTCHA...");
 
   const startTime = Date.now();
@@ -463,7 +466,9 @@ const resolveCaptchaAndClick = async (page, captchaService, timeout = 240000) =>
     logger.info(`Token CAPTCHA: ${captchaResponse}`);
 
     await page.evaluate((token) => {
-      const recaptchaResponseField = document.getElementById("g-recaptcha-response");
+      const recaptchaResponseField = document.getElementById(
+        "g-recaptcha-response"
+      );
       if (recaptchaResponseField) {
         recaptchaResponseField.value = token;
       } else {
@@ -473,7 +478,9 @@ const resolveCaptchaAndClick = async (page, captchaService, timeout = 240000) =>
 
     logger.info("Token inyectado en el campo g-recaptcha-response");
 
-    const recaptchaFrame = page.frames().find((frame) => frame.url().includes("recaptcha"));
+    const recaptchaFrame = page
+      .frames()
+      .find((frame) => frame.url().includes("recaptcha"));
     if (recaptchaFrame) {
       logger.info("Iframe de reCAPTCHA encontrado");
       await recaptchaFrame.waitForSelector(".recaptcha-checkbox-border", {
@@ -492,11 +499,12 @@ const resolveCaptchaAndClick = async (page, captchaService, timeout = 240000) =>
     logger.info(`CAPTCHA resuelto en: ${resolutionTime} segundos`);
     return captchaId;
   } catch (err) {
-    logger.error(`Error al resolver CAPTCHA con ${captchaService}: ${err.message}`);
+    logger.error(
+      `Error al resolver CAPTCHA con ${captchaService}: ${err.message}`
+    );
     throw err;
   }
 };
-
 
 const completeAndSubmitForm = async (page, cdNumber) => {
   logger.info("Completando el formulario...");
@@ -609,7 +617,7 @@ const checkRecaptchaAppearance = async (page) => {
   }
 };
 
-const extractRecaptchaDataWithCanvas = async (page) => {
+const extractRecaptchaData = async (page) => {
   try {
     // Esperar a que el iframe de reCAPTCHA aparezca
     await page.waitForSelector('iframe[src*="recaptcha/api2/bframe"]', {
@@ -630,82 +638,33 @@ const extractRecaptchaDataWithCanvas = async (page) => {
     // Obtener los datos del canvas y la imagen de los tiles
     const captchaData = await recaptchaFrame.evaluate(() => {
       return new Promise((resolve, reject) => {
-        let canvas = document.createElement("canvas");
-        let ctx = canvas.getContext("2d");
         let textinstructions = document
           .querySelector(".rc-imageselect-desc-wrapper")
           .innerText.replace(/\n/g, " ");
 
         // Intentar encontrar imagen de 4x4
+        let imageSrc;
+
         let img4x4 = document.querySelector("img.rc-image-tile-44");
-        if (!img4x4) {
-          // Si no hay imagen 4x4, buscar tabla de 3x3
-          let table3x3 = document.querySelector(
-            "table.rc-imageselect-table-33 > tbody"
-          );
-          if (!table3x3) {
-            reject("No se encontraron elementos del reCAPTCHA.");
-            return;
-          }
-
-          let initial3x3img = table3x3.querySelector("img.rc-image-tile-33");
-          if (!initial3x3img) {
-            reject("No se encontró imagen inicial de 3x3.");
-            return;
-          }
-
-          // Ajustar el canvas al tamaño de la primera imagen 3x3
-          canvas.width = initial3x3img.naturalWidth;
-          canvas.height = initial3x3img.naturalHeight;
-          ctx.drawImage(initial3x3img, 0, 0);
-
-          // Verificar si hay tiles actualizados (nuevas imágenes)
-          let updatedTiles = document.querySelectorAll("img.rc-image-tile-11");
-
-          // Definir posiciones de los tiles en el canvas
-          if (updatedTiles.length > 0) {
-            const pos = [
-              { x: 0, y: 0 },
-              { x: canvas.width / 3, y: 0 },
-              { x: (canvas.width / 3) * 2, y: 0 },
-              { x: 0, y: canvas.height / 3 },
-              { x: canvas.width / 3, y: canvas.height / 3 },
-              { x: (canvas.width / 3) * 2, y: canvas.height / 3 },
-              { x: 0, y: (canvas.height / 3) * 2 },
-              { x: canvas.width / 3, y: (canvas.height / 3) * 2 },
-              { x: (canvas.width / 3) * 2, y: (canvas.height / 3) * 2 },
-            ];
-
-            updatedTiles.forEach((tile) => {
-              const index =
-                tile.parentElement.parentElement.parentElement.tabIndex - 3;
-              if (index >= 0 && index < pos.length) {
-                ctx.drawImage(tile, pos[index].x, pos[index].y);
-              }
-            });
-          }
-
-          resolve({
-            rows: 3,
-            columns: 3,
-            type: "GridTask",
-            textinstructions,
-            body: canvas.toDataURL().replace(/^data:image\/[A-z]+;base64,/, ""),
-          });
+        let img3x3 = document.querySelector("img.rc-image-tile-33");
+        if (!img4x4 && !img3x3) reject("No se encontraron recaptcha images");
+        if (img4x4) {
+          imageSrc = img4x4.src;
+          rows = 4;
+          columns = 4;
         } else {
-          // Si existe una imagen 4x4
-          canvas.width = img4x4.naturalWidth;
-          canvas.height = img4x4.naturalHeight;
-          ctx.drawImage(img4x4, 0, 0);
-
-          resolve({
-            rows: 4,
-            columns: 4,
-            type: "GridTask",
-            textinstructions,
-            body: canvas.toDataURL().replace(/^data:image\/[A-z]+;base64,/, ""),
-          });
+          imageSrc = img3x3.src;
+          rows = 3;
+          columns = 3;
         }
+
+        resolve({
+          rows: rows,
+          columns: columns,
+          type: "GridTask",
+          textinstructions,
+          body: imageSrc,
+        });
       });
     });
 
@@ -784,12 +743,5 @@ const solveCaptchaInIframe = async (page, captchaSolverResponse) => {
     console.error("Error al resolver el captcha:", error);
   }
 };
-
-
-
-
-
-
-
 
 module.exports = { scrapeCA, scrapeWithoutBrowser };
