@@ -11,7 +11,6 @@ const {
 } = require("./src/tasks/addJobsToQueue");
 const { scrapingQueue } = require("./src/config/queue");
 const serverAdapter = require("./src/config/bullBoard");
-const { scrapeCA } = require("./src/services/scrapingService");
 const { monitorResources } = require("./src/monitor/monitor");
 const app = express();
 
